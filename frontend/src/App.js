@@ -19,7 +19,7 @@ function App() {
       });
       setResult(response.data);
     } catch (err) {
-      setError('Failed to fetch data. Please check the token address and try again.');
+      setError('Failed to fetch data. Please check the pair address and try again.');
     } finally {
       setLoading(false);
     }
