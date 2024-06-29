@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/TiagoLuz9292/cicd-project.git'
+                git 'https://github.com/TiagoLuz9292/solana-spl-momentum-scanner.git'
             }
         }
         stage('Build Frontend') {
