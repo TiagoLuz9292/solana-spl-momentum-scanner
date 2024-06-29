@@ -5,13 +5,21 @@ pipeline {
         DOCKERHUB_REPO = 'tiagoluz92/solana-spl-momentum-scanner'
         TAG = "${env.BUILD_NUMBER}"
         APP_NAME = 'solana-spl-momentum-scanner'
-        CONFIG_FILE = '/path/to/config.json'
+        GIT_CREDENTIALS = 'git_hub'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/TiagoLuz9292/solana-spl-momentum-scanner.git'
+                checkout([$class: 'GitSCM', 
+                    branches: [[name: '*/master']],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [], 
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/TiagoLuz9292/solana-spl-momentum-scanner.git', 
+                        credentialsId: "${GIT_CREDENTIALS}"
+                    ]]
+                ])
             }
         }
         stage('Build Frontend') {
