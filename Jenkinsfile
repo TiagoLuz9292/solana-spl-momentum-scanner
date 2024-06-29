@@ -2,45 +2,59 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker_hub')
+        DOCKERHUB_REPO = 'tiagoluz92/solana-spl-momentum-scanner'
+        TAG = "${env.BUILD_NUMBER}"
+        APP_NAME = 'solana-spl-momentum-scanner'
+        CONFIG_FILE = '/path/to/config.json'
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://gitlab.com/tiagoluz92/solana-spl-momentum-scanner.git'
+                git 'https://github.com/TiagoLuz9292/cicd-project.git'
             }
         }
-
-        stage('Build Backend Docker Image') {
+        stage('Build Frontend') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'DOCKER_HUB_CREDENTIALS') {
-                        def backendImage = docker.build("tiagoluz92/solana-spl-momentum-scanner:backend", "./backend")
-                        backendImage.push()
+                    docker.build("${env.DOCKERHUB_REPO}-frontend:${env.TAG}", "./frontend")
+                }
+            }
+        }
+        stage('Build Backend') {
+            steps {
+                script {
+                    docker.build("${env.DOCKERHUB_REPO}-backend:${env.TAG}", "./backend")
+                }
+            }
+        }
+        stage('Push Frontend') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker_hub') {
+                        docker.image("${env.DOCKERHUB_REPO}-frontend:${env.TAG}").push()
                     }
                 }
             }
         }
-
-        stage('Build Frontend Docker Image') {
+        stage('Push Backend') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'DOCKER_HUB_CREDENTIALS') {
-                        def frontendImage = docker.build("tiagoluz92/solana-spl-momentum-scanner:frontend", "./frontend")
-                        frontendImage.push()
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker_hub') {
+                        docker.image("${env.DOCKERHUB_REPO}-backend:${env.TAG}").push()
                     }
                 }
             }
         }
-    }
-
-    post {
-        success {
-            echo 'The build was successful!'
-        }
-        failure {
-            echo 'The build failed.'
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ['ec2-ssh-credentials-id']) {
+                    sh "scp /path/to/deploy.sh ec2-user@your-ec2-instance-public-ip:/home/ec2-user/deploy.sh"
+                    sh "scp /path/to/config.json ec2-user@your-ec2-instance-public-ip:/home/ec2-user/config.json"
+                    sh "ssh ec2-user@your-ec2-instance-public-ip 'bash /home/ec2-user/deploy.sh $APP_NAME $DOCKERHUB_REPO $TAG frontend /home/ec2-user/config.json'"
+                    sh "ssh ec2-user@your-ec2-instance-public-ip 'bash /home/ec2-user/deploy.sh $APP_NAME $DOCKERHUB_REPO $TAG backend /home/ec2-user/config.json'"
+                }
+            }
         }
     }
 }
