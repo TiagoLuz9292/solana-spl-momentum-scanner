@@ -46,15 +46,5 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to EC2') {
-            steps {
-                sshagent(credentials: ['ec2-ssh-credentials-id']) {
-                    sh "scp /path/to/deploy.sh ec2-user@your-ec2-instance-public-ip:/home/ec2-user/deploy.sh"
-                    sh "scp /path/to/config.json ec2-user@your-ec2-instance-public-ip:/home/ec2-user/config.json"
-                    sh "ssh ec2-user@your-ec2-instance-public-ip 'bash /home/ec2-user/deploy.sh $APP_NAME $DOCKERHUB_REPO $TAG frontend /home/ec2-user/config.json'"
-                    sh "ssh ec2-user@your-ec2-instance-public-ip 'bash /home/ec2-user/deploy.sh $APP_NAME $DOCKERHUB_REPO $TAG backend /home/ec2-user/config.json'"
-                }
-            }
-        }
     }
 }
