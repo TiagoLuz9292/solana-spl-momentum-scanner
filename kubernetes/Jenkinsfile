@@ -1,0 +1,97 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_SHARED_CREDENTIALS_FILE = '/root/.aws/credentials'
+        ANSIBLE_GROUP = 'Docker'
+        AWS_REGION = 'eu-north-1'
+        SSH_PRIVATE_KEY = credentials('ec2-instance-key') // Update with the correct ID
+    }
+
+    stages {
+        stage('Verify Environment') {
+            steps {
+                script {
+                    // Print environment variables for debugging
+                    sh 'printenv | grep AWS'
+                    // Print contents of AWS credentials file for debugging
+                    sh 'cat $AWS_SHARED_CREDENTIALS_FILE'
+                }
+            }
+        }
+        stage('Prepare Environment') {
+            steps {
+                script {
+                    // Ensure the target directory exists and has the right permissions
+                    sh 'mkdir -p /root/project/devops/ansible'
+                    sh 'chmod 755 /root/project/devops/ansible'
+                    // Print current directory and permissions for debugging
+                    sh 'pwd'
+                    sh 'ls -ld /root/project/devops/ansible'
+                }
+            }
+        }
+        stage('Generate Inventory') {
+            steps {
+                script {
+                    sh 'chmod +x /root/project/devops/aws_ec2_inventory.py'
+                    sh '''
+                    AWS_SHARED_CREDENTIALS_FILE=$AWS_SHARED_CREDENTIALS_FILE ANSIBLE_GROUP=$ANSIBLE_GROUP AWS_REGION=$AWS_REGION python3 /root/project/devops/aws_ec2_inventory.py --group $ANSIBLE_GROUP --region $AWS_REGION --output /root/project/devops/ansible/inventory.ini
+                    '''
+                    // Debugging statements
+                    sh 'echo "Inventory file generation completed."'
+                    sh 'ls -l /root/project/devops/ansible'
+                    sh 'cat /root/project/devops/ansible/inventory.ini || echo "Inventory file not found or empty."'
+                }
+            }
+        }
+        stage('Add to Known Hosts') {
+            steps {
+                script {
+                    def inventory = readFile('/root/project/devops/ansible/inventory.ini')
+                    def hosts = inventory.split('\n').findAll { it.contains('.') }
+                    for (host in hosts) {
+                        sh "ssh-keyscan -H ${host} >> ~/.ssh/known_hosts"
+                    }
+                }
+            }
+        }
+        stage('Deploy Frontend') {
+            steps {
+                ansiblePlaybook(
+                    playbook: '/root/project/devops/ansible/playbooks/deploy-main.yaml',
+                    inventory: '/root/project/devops/ansible/inventory.ini',
+                    extraVars: [
+                        app_name: 'solana-spl-momentum-scanner',
+                        dockerhub_repo: 'tiagoluz92/solana-spl-momentum-scanner',
+                        tag: '26', // Ensure the tag matches your requirements
+                        service: 'frontend',
+                        config_file: '/home/ec2-user/applications/solana-spl-momentum-scanner/config.json'
+                    ],
+                    credentialsId: 'ec2-instance-key' // Update with the correct ID
+                )
+            }
+        }
+        stage('Deploy Backend') {
+            steps {
+                ansiblePlaybook(
+                    playbook: '/root/project/devops/ansible/playbooks/deploy-main.yaml',
+                    inventory: '/root/project/devops/ansible/inventory.ini',
+                    extraVars: [
+                        app_name: 'solana-spl-momentum-scanner',
+                        dockerhub_repo: 'tiagoluz92/solana-spl-momentum-scanner',
+                        tag: '26', // Ensure the tag matches your requirements
+                        service: 'backend',
+                        config_file: '/home/ec2-user/applications/solana-spl-momentum-scanner/config.json'
+                    ],
+                    credentialsId: 'ec2-instance-key' // Update with the correct ID
+                )
+            }
+        }
+    }
+    post {
+        cleanup {
+            cleanWs()
+        }
+    }
+}
