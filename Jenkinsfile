@@ -59,5 +59,13 @@ pipeline {
                 }
             }
         }
+        stage('Cleanup Docker Images') {
+            steps {
+                script {
+                    sh "docker rmi ${env.DOCKERHUB_REPO}-frontend:${env.TAG}"
+                    sh "docker rmi ${env.DOCKERHUB_REPO}-backend:${env.TAG}"
+                }
+            }
+        }
     }
 }

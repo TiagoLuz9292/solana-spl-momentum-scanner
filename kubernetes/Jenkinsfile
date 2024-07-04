@@ -3,13 +3,11 @@ pipeline {
 
     environment {
         AWS_SHARED_CREDENTIALS_FILE = '/root/.aws/credentials'
-        ANSIBLE_GROUP = 'Docker'
         AWS_REGION = 'eu-north-1'
-        SSH_PRIVATE_KEY = credentials('ec2-instance-key') // Update with the correct ID
-        MASTER_NODE_IP = '13.51.102.35'
+        SSH_PRIVATE_KEY = credentials('ec2-instance-key')
         KUBECONFIG_PATH = '/root/project/devops/jenkins-docker/k3s-jenkins.yaml'
         GIT_REPO = 'https://github.com/TiagoLuz9292/solana-spl-momentum-scanner.git'
-        GIT_BRANCH = 'master' // Adjust this to your target branch
+        GIT_BRANCH = 'master'
         INVENTORY_FILE = '/root/project/devops/kubernetes/inventory'
     }
 
@@ -38,43 +36,38 @@ pipeline {
         }
         stage('Clone Repository') {
             steps {
-                // Clone the repository containing the application code and k8s manifests
-                git branch: "${GIT_BRANCH}", url: "${GIT_REPO}"
+                withCredentials([usernamePassword(credentialsId: 'git_hub', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                    script {
+                        sh 'git clone https://$GIT_USERNAME:$GIT_PASSWORD@github.com/TiagoLuz9292/solana-spl-momentum-scanner.git -b ${GIT_BRANCH} .'
+                    }
+                }
             }
         }
         stage('Add to Known Hosts') {
             steps {
                 script {
                     def inventory = readFile("${INVENTORY_FILE}")
-                    def hosts = inventory.split('\n').findAll { it.contains('.') }
+                    def hosts = inventory.split('\n').findAll { it.contains('ansible_host') }.collect { it.split('=')[1].split()[0] }
                     for (host in hosts) {
-                        sh "ssh-keyscan -H ${host.split()[0]} >> ~/.ssh/known_hosts"
+                        sh "ssh-keyscan -H ${host} >> ~/.ssh/known_hosts"
                     }
                 }
             }
         }
-        stage('Fetch kubeconfig') {
-            steps {
-                script {
-                    // Fetch the kubeconfig file from the master node
-                    sh "scp -i ~/.ssh/my-key-pair ec2-user@$MASTER_NODE_IP:/tmp/k3s-jenkins.yaml $KUBECONFIG_PATH"
-                }
-            }
-        }
-        stage('Deploy to K3s') {
+        stage('Deploy to Kind') {
             steps {
                 script {
                     // Apply Kubernetes manifests for backend and frontend
-                    sh 'kubectl apply -f kubernetes/k8s-manifests/backend-deployment.yaml --kubeconfig=$KUBECONFIG_PATH'
-                    sh 'kubectl apply -f kubernetes/k8s-manifests/backend-service.yaml --kubeconfig=$KUBECONFIG_PATH'
-                    sh 'kubectl apply -f kubernetes/k8s-manifests/frontend-deployment.yaml --kubeconfig=$KUBECONFIG_PATH'
-                    sh 'kubectl apply -f kubernetes/k8s-manifests/frontend-service.yaml --kubeconfig=$KUBECONFIG_PATH'
+                    sh 'kubectl apply -f kubernetes/k8s-manifests/backend-deployment.yaml --kubeconfig=$KUBECONFIG_PATH --validate=false'
+                    sh 'kubectl apply -f kubernetes/k8s-manifests/backend-service.yaml --kubeconfig=$KUBECONFIG_PATH --validate=false'
+                    sh 'kubectl apply -f kubernetes/k8s-manifests/frontend-deployment.yaml --kubeconfig=$KUBECONFIG_PATH --validate=false'
+                    sh 'kubectl apply -f kubernetes/k8s-manifests/frontend-service.yaml --kubeconfig=$KUBECONFIG_PATH --validate=false'
                 }
             }
         }
     }
     post {
-        cleanup {
+        always {
             cleanWs()
         }
     }
