@@ -30,6 +30,11 @@ pipeline {
                 }
             }
         }
+        stage('Cleanup Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
         stage('Clone Repository') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'git_hub', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
