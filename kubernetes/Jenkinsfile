@@ -18,18 +18,6 @@ pipeline {
                 }
             }
         }
-        stage('Prepare Environment') {
-            steps {
-                script {
-                    // Ensure the target directory exists and has the right permissions
-                    sh 'mkdir -p /root/project/devops/kubernetes'
-                    sh 'chmod 755 /root/project/devops/kubernetes'
-                    // Print current directory and permissions for debugging
-                    sh 'pwd'
-                    sh 'ls -ld /root/project/devops/kubernetes'
-                }
-            }
-        }
         stage('Cleanup Workspace') {
             steps {
                 cleanWs()
