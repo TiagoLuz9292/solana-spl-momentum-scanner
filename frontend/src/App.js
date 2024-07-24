@@ -14,7 +14,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/check_ohlcv_v2', {
+      const response = await axios.post('http://backend-service.default.svc.cluster.local:5000/check_ohlcv_v2', {
         pairAddress: tokenAddress,
       });
       setResult(response.data);
