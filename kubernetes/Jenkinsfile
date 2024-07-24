@@ -25,9 +25,9 @@ pipeline {
         }
         stage('Clone Repository') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'git_hub', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                withCredentials([string(credentialsId: 'git_hub_token', variable: 'GITHUB_TOKEN')]) {
                     script {
-                        sh 'git clone https://$GIT_USERNAME:$GIT_PASSWORD@github.com/TiagoLuz9292/solana-spl-momentum-scanner.git -b ${GIT_BRANCH} .'
+                        sh 'git clone https://$GITHUB_TOKEN@github.com/TiagoLuz9292/solana-spl-momentum-scanner.git -b ${GIT_BRANCH} .'
                     }
                 }
             }
