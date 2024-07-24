@@ -14,8 +14,8 @@ function App() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://10.103.157.196:8000/check_ohlcv_v2', {
-        pairAddress: tokenAddress,
+      const response = await axios.get(`http://10.103.157.196:8000/check_ohlcv_v2`, {
+        params: { pairAddress: tokenAddress },
       });
       setResult(response.data);
     } catch (err) {

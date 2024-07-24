@@ -46,8 +46,8 @@ def fetch_pool_data(poolAddress, minuteOrHour, timeFrame, frameAmount):
                 raise e
     raise Exception(f"Failed to fetch data after {max_retries} attempts.")
 
-@app.post("/check_ohlcv_v2")
-def analyze_conditions(data: PoolAddress):
+@app.get("/check_ohlcv_v2")
+def analyze_conditions(pairAddress: str = Query(...)):
     pairAddress = data.pairAddress
     print("Request received for pairAddress:", pairAddress)
     
