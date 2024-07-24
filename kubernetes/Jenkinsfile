@@ -2,13 +2,11 @@ pipeline {
     agent any
 
     environment {
-        AWS_SHARED_CREDENTIALS_FILE = '/root/.aws/credentials'
         AWS_REGION = 'eu-north-1'
-        SSH_PRIVATE_KEY = credentials('ec2-instance-key')
-        KUBECONFIG_PATH = '/root/project/devops/jenkins-docker/k3s-jenkins.yaml'
+        KUBECONFIG_PATH = '/home/ec2-user/devops_setup/jenkins-docker/kubeconfig-jenkins.yaml'
         GIT_REPO = 'https://github.com/TiagoLuz9292/solana-spl-momentum-scanner.git'
         GIT_BRANCH = 'master'
-        INVENTORY_FILE = '/root/project/devops/kubernetes/inventory'
+        INVENTORY_FILE = '/home/ec2-user/devops_setup/kubernetes/inventory'
     }
 
     stages {
@@ -17,8 +15,6 @@ pipeline {
                 script {
                     // Print environment variables for debugging
                     sh 'printenv | grep AWS'
-                    // Print contents of AWS credentials file for debugging
-                    sh 'cat $AWS_SHARED_CREDENTIALS_FILE'
                 }
             }
         }
@@ -43,6 +39,13 @@ pipeline {
                 }
             }
         }
+        stage('Generate Inventory') {
+            steps {
+                script {
+                    sh '/home/ec2-user/devops_setup/terraform/generate_inventory.sh'
+                }
+            }
+        }
         stage('Add to Known Hosts') {
             steps {
                 script {
@@ -54,7 +57,7 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Kind') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
                     // Apply Kubernetes manifests for backend and frontend
@@ -68,7 +71,9 @@ pipeline {
     }
     post {
         always {
-            cleanWs()
+            node {
+                cleanWs()
+            }
         }
     }
 }
