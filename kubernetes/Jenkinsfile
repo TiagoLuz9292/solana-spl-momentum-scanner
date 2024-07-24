@@ -32,13 +32,6 @@ pipeline {
                 }
             }
         }
-        stage('Generate Inventory') {
-            steps {
-                script {
-                    sh '/home/ec2-user/devops_setup/terraform/generate_inventory.sh'
-                }
-            }
-        }
         stage('Add to Known Hosts') {
             steps {
                 script {
